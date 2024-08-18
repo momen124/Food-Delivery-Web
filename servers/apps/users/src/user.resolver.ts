@@ -12,14 +12,14 @@ export class UserResolver {
   @Mutation(() => RegisterResponse)
   async register(
     @Args('registerInput') registerDto: RegisterDto,
-    @Context() context: { res: Response },
   ): Promise<RegisterResponse> {
     if (!registerDto.name || !registerDto.email || !registerDto.password) {
       throw new BadRequestException('Please fill in all fields');
     }
-    const user = await this.usersService.register(registerDto, context.res);
+    const user = await this.usersService.register(registerDto);
     return { user };
   }
+  
   @Query(() => [User])
   async getUsers() {
     return this.usersService.getUsers();

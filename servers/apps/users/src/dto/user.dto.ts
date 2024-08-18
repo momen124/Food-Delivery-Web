@@ -18,9 +18,9 @@ export class RegisterDto {
   @IsEmail({}, { message: 'Email is invalid.' })
   email: string;
 
-  @Field()
+  @Field({ nullable: true })  // Make phone_number optional
   @IsNotEmpty({ message: 'Phone Number is required.' })
-  phone_number?: string;
+  phone_number!: string;
 }
 
 @InputType()

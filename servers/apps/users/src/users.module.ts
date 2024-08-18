@@ -10,6 +10,7 @@ import { UsersService } from './users.service';
 import { PrismaService } from '../../../prisma/Prisma.service'; // Corrected path
 import { UserResolver } from './user.resolver';
 import { EmailModule } from './email/email.module';
+import { MongoDBService } from './mongodb.service';
 
 
 @Module({
@@ -23,15 +24,16 @@ import { EmailModule } from './email/email.module';
         federation: 2,
       },
     }),
-    EmailModule,
+    EmailModule, // Ensure this is correctly imported
   ],
-  controllers: [],
   providers: [
     UsersService,
     ConfigService,
     JwtService,
     PrismaService,
     UserResolver,
+    MongoDBService
   ],
+  exports:[MongoDBService]
 })
 export class UsersModule {}

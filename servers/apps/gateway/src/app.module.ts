@@ -11,12 +11,11 @@ import { UsersModule } from 'apps/users/src/users.module';
       gateway: {
         supergraphSdl: new IntrospectAndCompose({
           subgraphs: [
-            // Define your subgraphs here
           ],
         }),
       },
     }),
-    UsersModule,  // Register the UsersModule
+    UsersModule,
   ],
   controllers: [],
   providers: [],
