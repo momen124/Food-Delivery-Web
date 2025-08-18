@@ -1,4 +1,3 @@
-// Update your users.module.ts
 import { Module } from '@nestjs/common';
 import { GraphQLModule } from '@nestjs/graphql';
 import {
@@ -7,35 +6,55 @@ import {
 } from '@nestjs/apollo';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import * as Joi from 'joi';
+
 // Core modules
 import { UsersResolver } from './user.resolver';
 import { EmailModule } from './email/email.module';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from './users.service';
+import { UsersController } from './users.controller';
+
 // Security modules
 import { RateLimitingModule } from './security/rate-limiting.module';
 import { CsrfModule } from './security/csrf.module';
 import { SessionModule } from './security/session.module';
 import { AccountLockoutService } from './security/account-lockout.service';
 import { TwoFactorAuthService } from './security/two-factor-auth.service';
+
 // Guards
 import { AuthGuard } from './guards/auth.guard';
-import { CsrfGuard } from './security/guards/csrf.guard';
-import { TwoFactorGuard } from './security/guards/two-factor.guard';
+import { CustomThrottlerGuard } from './guards/custom-throttler.guard';
+
+// Configuration
+import configuration, { validateConfig } from './config/configuration';
+import { SessionService } from './security/session.service';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      validationSchema: {
-        // Add validation for security-related env vars
-        CSRF_SECRET: Joi.string().min(32),
+      load: [configuration],
+      validate: validateConfig,
+      validationSchema: Joi.object({
+        DATABASE_URL: Joi.string().required(),
+        ACTIVATION_SECRET: Joi.string().min(32).required(),
+        ACCESS_TOKEN_SECRET: Joi.string().min(32).required(),
+        REFRESH_TOKEN_SECRET: Joi.string().min(32).required(),
+        FORGOT_PASSWORD_SECRET: Joi.string().min(32).required(),
+        CLIENT_SIDE_URI: Joi.string().uri().required(),
+        SMTP_HOST: Joi.string().required(),
+        SMTP_MAIL: Joi.string().email().required(),
+        SMTP_PASSWORD: Joi.string().required(),
+        PORT: Joi.number().default(4001),
+        NODE_ENV: Joi.string().default('development'),
+        CSRF_SECRET: Joi.string().min(32).optional(),
         RATE_LIMIT_TTL: Joi.number().default(60),
         RATE_LIMIT_MAX: Joi.number().default(100),
-        SESSION_SECRET: Joi.string().min(32),
+        SESSION_SECRET: Joi.string().min(32).optional(),
         TWO_FACTOR_APP_NAME: Joi.string().default('Food Delivery'),
-      },
+      }),
     }),
     GraphQLModule.forRoot<ApolloFederationDriverConfig>({
       driver: ApolloFederationDriver,
@@ -45,16 +64,17 @@ import { TwoFactorGuard } from './security/guards/two-factor.guard';
       context: ({ req, res }) => ({
         req,
         res,
-        // Add CSRF token to GraphQL context
         csrfToken: req.headers['x-csrf-token'],
       }),
+      introspection: process.env.NODE_ENV !== 'production',
+      playground: process.env.NODE_ENV !== 'production',
     }),
     EmailModule,
     RateLimitingModule,
     CsrfModule,
     SessionModule,
   ],
-  controllers: [],
+  controllers: [UsersController],
   providers: [
     UsersService,
     ConfigService,
@@ -63,7 +83,7 @@ import { TwoFactorGuard } from './security/guards/two-factor.guard';
     UsersResolver,
     AccountLockoutService,
     TwoFactorAuthService,
-    // Apply guards globally
+    SessionService,
     {
       provide: APP_GUARD,
       useClass: AuthGuard,

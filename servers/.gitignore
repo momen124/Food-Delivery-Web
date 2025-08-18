@@ -3,9 +3,8 @@
 /node_modules
 /build
 
-# Dependency directories
 pnpm-lock.yaml
-
+yarn.lock
 # Logs
 logs
 *.log

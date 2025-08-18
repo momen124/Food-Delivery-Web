@@ -1,19 +1,24 @@
+// Fixed rate-limiting.service.ts
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService } from 'prisma/Prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
+
 export interface RateLimitConfig {
   windowMs: number;
   maxRequests: number;
   skipSuccessfulRequests?: boolean;
   skipFailedRequests?: boolean;
 }
+
 @Injectable()
 export class RateLimitingService {
   private readonly logger = new Logger(RateLimitingService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
   ) {}
+
   async checkRateLimit(
     identifier: string,
     config: RateLimitConfig,
@@ -28,6 +33,7 @@ export class RateLimitingService {
           createdAt: { lt: windowStart },
         },
       });
+
       // Count current requests
       const currentRequests = await this.prisma.rateLimitEntry.count({
         where: {
@@ -35,9 +41,11 @@ export class RateLimitingService {
           createdAt: { gte: windowStart },
         },
       });
+
       const allowed = currentRequests < config.maxRequests;
       const remainingRequests = Math.max(0, config.maxRequests - currentRequests);
       const resetTime = new Date(Date.now() + config.windowMs);
+
       if (allowed) {
         // Record this request
         await this.prisma.rateLimitEntry.create({
@@ -47,6 +55,7 @@ export class RateLimitingService {
           },
         });
       }
+
       return { allowed, remainingRequests, resetTime };
     } catch (error) {
       this.logger.error(`Rate limiting check failed for ${identifier}`, error.stack);
@@ -54,6 +63,7 @@ export class RateLimitingService {
       return { allowed: true, remainingRequests: config.maxRequests, resetTime: new Date() };
     }
   }
+
   async isRateLimited(identifier: string, windowMs: number, maxRequests: number): Promise<boolean> {
     const result = await this.checkRateLimit(identifier, { windowMs, maxRequests });
     return !result.allowed;

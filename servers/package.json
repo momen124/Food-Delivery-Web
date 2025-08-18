@@ -1,7 +1,7 @@
 {
-  "name": "gateway",
+  "name": "food-delivery-microservices",
   "version": "0.0.1",
-  "description": "",
+  "description": "Food delivery microservices with NestJS",
   "author": "",
   "private": true,
   "license": "UNLICENSED",
@@ -12,12 +12,22 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/apps/gateway/main",
+    "start:gateway": "nest start gateway --watch",
+    "start:users": "nest start users --watch",
+    "start:gateway:prod": "node dist/apps/gateway/main",
+    "start:users:prod": "node dist/apps/users/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./apps/gateway/test/jest-e2e.json"
+    "test:e2e": "jest --config ./apps/gateway/test/jest-e2e.json",
+    "test:e2e:users": "jest --config ./apps/users/test/jest-e2e.json",
+    "prisma:generate": "prisma generate",
+    "prisma:push": "prisma db push",
+    "prisma:studio": "prisma studio",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:reset": "prisma migrate reset"
   },
   "dependencies": {
     "@apollo/gateway": "^2.8.4",
@@ -32,8 +42,6 @@
     "@nestjs/platform-express": "^10.3.10",
     "@nestjs/throttler": "^6.4.0",
     "@prisma/client": "^5.18.0",
-    "@types/bcryptjs": "^3.0.0",
-    "@types/ejs": "^3.1.5",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
     "class-transformer": "^0.5.1",
@@ -46,6 +54,7 @@
     "express-session": "^1.18.2",
     "graphql": "^16.9.0",
     "helmet": "^8.1.0",
+    "joi": "^17.13.3",
     "mongodb": "^6.8.0",
     "nodemailer": "^6.9.14",
     "qrcode": "^1.5.4",
@@ -58,11 +67,13 @@
     "@nestjs/schematics": "^10.0.0",
     "@nestjs/testing": "^10.0.0",
     "@types/bcrypt": "^5.0.2",
+    "@types/ejs": "^3.1.5",
     "@types/express": "^4.17.17",
     "@types/express-rate-limit": "^6.0.2",
     "@types/express-session": "^1.18.2",
     "@types/graphql": "^14.5.0",
     "@types/jest": "^29.5.2",
+    "@types/joi": "^17.2.3",
     "@types/node": "^20.3.1",
     "@types/qrcode": "^1.5.5",
     "@types/redis": "^4.0.11",
@@ -102,6 +113,10 @@
     "testEnvironment": "node",
     "roots": [
       "<rootDir>/apps/"
-    ]
+    ],
+    "moduleNameMapping": {
+      "^@app/(.*)$": "<rootDir>/libs/$1/src",
+      "^@/(.*)$": "<rootDir>/$1"
+    }
   }
 }
