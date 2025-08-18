@@ -33,7 +33,7 @@ export class UserResolver {
     try {
       const { user, activationToken } = await this.usersService.register(registerDto);
       return {
-        user,
+        user: user as User, // Type assertion to fix the type error
         activationToken,
       };
     } catch (error) {
@@ -51,7 +51,7 @@ export class UserResolver {
   ): Promise<ActivationResponse> {
     try {
       const { user } = await this.usersService.activateUser(activationDto);
-      return { user };
+      return { user: user as User };
     } catch (error) {
       return {
         error: {
@@ -68,7 +68,7 @@ export class UserResolver {
     try {
       const { user, accessToken, refreshToken } = await this.usersService.login(loginDto);
       return {
-        user,
+        user: user as User,
         accessToken,
         refreshToken,
       };
@@ -85,7 +85,7 @@ export class UserResolver {
   async getLoggedInUser(@Context() context: { req: any }): Promise<LoginResponse> {
     try {
       const { user, accessToken, refreshToken } = await this.usersService.getLoggedInUser(context.req);
-      return { user, accessToken, refreshToken };
+      return { user: user as User, accessToken, refreshToken };
     } catch (error) {
       return {
         error: {
@@ -109,6 +109,7 @@ export class UserResolver {
       return { message };
     } catch (error) {
       return {
+        message: 'An error occurred', // Provide required message field
         error: {
           message: error.message,
         },
@@ -122,7 +123,7 @@ export class UserResolver {
   ): Promise<ResetPasswordResponse> {
     try {
       const { user } = await this.usersService.resetPassword(resetPasswordDto);
-      return { user };
+      return { user: user as User };
     } catch (error) {
       return {
         error: {
@@ -134,6 +135,7 @@ export class UserResolver {
 
   @Query(() => [User])
   async getUsers() {
-    return this.usersService.getUsers();
+    const users = await this.usersService.getUsers();
+    return users.map(user => user as User);
   }
 }

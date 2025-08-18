@@ -7,6 +7,7 @@ import { UsersService } from './users.service';
 import { PrismaService } from '../../../prisma/Prisma.service';
 import { UserResolver } from './user.resolver';
 import { EmailModule } from './email/email.module';
+import { MongoDBService } from './mongodb.service'; // Add this import
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { EmailModule } from './email/email.module';
     ConfigService,
     PrismaService,
     UserResolver,
+    MongoDBService, 
   ],
 })
 export class UsersModule {}

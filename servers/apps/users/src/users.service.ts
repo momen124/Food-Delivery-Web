@@ -9,9 +9,8 @@ import {
   ForgotPasswordDto, 
   ResetPasswordDto 
 } from './dto/user.dto';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs'; // Changed from bcrypt to bcryptjs
 import { EmailService } from './email/email.service';
-import { User } from '@prisma/client';
 
 interface UserData {
   name: string;
@@ -206,7 +205,7 @@ export class UsersService {
   }
 
   // Create forgot password token
-  async createForgotPasswordLink(user: User) {
+  async createForgotPasswordLink(user: any) {
     const forgotPasswordToken = this.jwtService.sign(
       {
         user,

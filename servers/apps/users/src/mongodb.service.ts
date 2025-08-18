@@ -1,16 +1,12 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
 import { MongoClient } from 'mongodb';
 
 @Injectable()
-export class MongoDBService {
+export class MongoDBService implements OnModuleInit, OnApplicationShutdown {
   private readonly logger = new Logger(MongoDBService.name);
   private client: MongoClient;
 
-  constructor() {
-    this.connect();
-  }
-
-  async connect() {
+  async onModuleInit() {
     const uri = process.env.DATABASE_URL;
     if (!uri) {
       this.logger.error('DATABASE_URL is not defined');
@@ -24,6 +20,13 @@ export class MongoDBService {
     } catch (error) {
       this.logger.error('Failed to connect to MongoDB', error.stack);
       throw error;
+    }
+  }
+
+  async onApplicationShutdown(signal?: string) {
+    if (this.client) {
+      await this.client.close();
+      this.logger.log('Disconnected from MongoDB');
     }
   }
 
