@@ -3,6 +3,9 @@
 /node_modules
 /build
 
+# Dependency directories
+pnpm-lock.yaml
+
 # Logs
 logs
 *.log
