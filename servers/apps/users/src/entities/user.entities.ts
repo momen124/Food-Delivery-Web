@@ -1,4 +1,4 @@
-import { ObjectType, Field, Directive } from '@nestjs/graphql';
+import { ObjectType, Field, Directive, HideField } from '@nestjs/graphql';
 
 @ObjectType()
 @Directive('@key(fields:"id")')
@@ -27,7 +27,7 @@ export class User {
   @Field()
   email: string;
 
-  @Field()
+  @HideField()
   password: string;
 
   @Field(() => Avatars, { nullable: true })
