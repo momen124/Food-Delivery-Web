@@ -1,3 +1,4 @@
+// Update your existing auth.guard.ts
 import {
   CanActivate,
   ExecutionContext,
@@ -9,85 +10,120 @@ import {
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService } from "../../prisma/prisma.service";
-
+import { Reflector } from '@nestjs/core';
+import { PrismaService } from '../../prisma/prisma.service';
+import { SessionService } from '../security/session.service';
+import { TwoFactorAuthService } from '../security/two-factor-auth.service';
+import { AccountLockoutService } from '../security/account-lockout.service';
+export const Public = () => Reflector.createDecorator<boolean>();
+export const SkipTwoFactor = () => Reflector.createDecorator<boolean>();
 @Injectable()
 export class AuthGuard implements CanActivate {
   private readonly logger = new Logger(AuthGuard.name);
-
   constructor(
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly reflector: Reflector,
+    private readonly sessionService: SessionService,
+    private readonly twoFactorService: TwoFactorAuthService,
+    private readonly lockoutService: AccountLockoutService,
   ) {}
-
   async canActivate(context: ExecutionContext): Promise<boolean> {
     try {
       const gqlContext = GqlExecutionContext.create(context);
       const { req } = gqlContext.getContext();
-
+      // Check if route is public
+      const isPublic = this.reflector.getAllAndOverride<boolean>('isPublic', [
+        context.getHandler(),
+        context.getClass(),
+      ]);
+      if (isPublic) {
+        return true;
+      }
       const accessToken = req.headers.accesstoken as string;
       const refreshToken = req.headers.refreshtoken as string;
-
-      // Check if tokens are present
+      const sessionId = req.headers.sessionid as string;
       if (!accessToken || !refreshToken) {
-        this.logger.warn('Missing authentication tokens');
-        throw new UnauthorizedException('Authentication tokens are required. Please login to access this resource!');
+        throw new UnauthorizedException('Authentication tokens are required');
       }
-
+      // Validate session if provided
+      if (sessionId) {
+        const session = await this.sessionService.getSession(sessionId);
+        if (!session || !session.isActive) {
+          throw new UnauthorizedException('Invalid or expired session');
+        }
+       
+        // Update session activity
+        await this.sessionService.updateSessionActivity(sessionId);
+        req.sessionId = sessionId;
+        req.session = session;
+      }
       // Validate and potentially refresh access token
       if (accessToken) {
         try {
           const decoded = this.jwtService.decode(accessToken);
-
           if (!decoded) {
-            this.logger.warn('Invalid access token format');
             throw new UnauthorizedException('Invalid access token format');
           }
-
           const expirationTime = decoded?.exp;
-
           if (!expirationTime) {
-            this.logger.warn('Access token missing expiration');
             throw new UnauthorizedException('Invalid token structure');
           }
-
           // If token is expired, try to refresh it
           if (expirationTime * 1000 < Date.now()) {
-            this.logger.log('Access token expired, attempting to refresh');
             await this.updateAccessToken(req);
           } else {
             // Token is valid, verify user exists and attach to request
             await this.attachUserToRequest(req, decoded.id);
           }
+          // Check if 2FA is required for this operation
+          await this.checkTwoFactorRequirement(context, req);
         } catch (jwtError) {
           this.logger.warn('Access token verification failed', jwtError.message);
           throw new UnauthorizedException('Invalid access token');
         }
       }
-
       return true;
-
     } catch (error) {
       this.logger.error('Authentication guard error', error.stack);
-      
+     
       if (error instanceof UnauthorizedException) {
         throw error;
       }
-      
+     
       throw new UnauthorizedException('Authentication failed');
     }
   }
-
+  private async checkTwoFactorRequirement(context: ExecutionContext, req: any): Promise<void> {
+    const skipTwoFactor = this.reflector.getAllAndOverride<boolean>('skipTwoFactor', [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (skipTwoFactor) {
+      return;
+    }
+    const user = req.user;
+    if (!user) {
+      return;
+    }
+    // Check if user has 2FA enabled
+    const twoFactorEnabled = await this.twoFactorService.isTwoFactorEnabled(user.id);
+    if (!twoFactorEnabled) {
+      return;
+    }
+    // Check if current session has 2FA verified
+    const session = req.session;
+    if (!session || !session.isTwoFactorVerified) {
+      throw new UnauthorizedException('Two-factor authentication required');
+    }
+  }
   private async updateAccessToken(req: any): Promise<void> {
     try {
       const refreshTokenData = req.headers.refreshtoken as string;
-
       if (!refreshTokenData) {
         throw new UnauthorizedException('Refresh token is required');
       }
-
-      // Verify refresh token
       let decoded: any;
       try {
         decoded = this.jwtService.verify(refreshTokenData, {
@@ -97,46 +133,41 @@ export class AuthGuard implements CanActivate {
         this.logger.warn('Invalid refresh token', jwtError.message);
         throw new UnauthorizedException('Invalid or expired refresh token. Please login again.');
       }
-
       if (!decoded?.id) {
         throw new UnauthorizedException('Invalid refresh token structure');
       }
-
       const expirationTime = decoded.exp * 1000;
-
       if (expirationTime < Date.now()) {
-        this.logger.warn('Refresh token expired');
         throw new UnauthorizedException('Refresh token expired. Please login again.');
       }
-
+      // Check account lockout
+      const lockoutStatus = await this.lockoutService.checkAccountLockout(decoded.id);
+      if (lockoutStatus.isLocked) {
+        throw new UnauthorizedException(
+          `Account is locked until ${lockoutStatus.unlockTime?.toISOString()}`
+        );
+      }
       // Find user in database
       const user = await this.prisma.user.findUnique({
         where: { id: decoded.id },
-        include: { avatar: true }
+        include: { avatar: true, twoFactorAuth: true }
       });
-
       if (!user) {
-        this.logger.warn(`User not found during token refresh: ${decoded.id}`);
         throw new UnauthorizedException('User not found. Please login again.');
       }
-
       // Generate new tokens
       const accessTokenSecret = this.config.get<string>('ACCESS_TOKEN_SECRET');
       const refreshTokenSecret = this.config.get<string>('REFRESH_TOKEN_SECRET');
-
       if (!accessTokenSecret || !refreshTokenSecret) {
-        this.logger.error('Missing token secrets in configuration');
         throw new InternalServerErrorException('Server configuration error');
       }
-
       const newAccessToken = this.jwtService.sign(
         { id: user.id },
         {
           secret: accessTokenSecret,
-          expiresIn: '15m', // Increased from 5m for better UX
+          expiresIn: '15m',
         },
       );
-
       const newRefreshToken = this.jwtService.sign(
         { id: user.id },
         {
@@ -144,70 +175,39 @@ export class AuthGuard implements CanActivate {
           expiresIn: '7d',
         },
       );
-
       // Attach new tokens and user to request
       req.accesstoken = newAccessToken;
       req.refreshtoken = newRefreshToken;
       req.user = user;
-
-      this.logger.log(`Tokens refreshed successfully for user: ${user.id}`);
-
     } catch (error) {
-      this.logger.error('Token refresh failed', error.stack);
-      
       if (error instanceof UnauthorizedException) {
         throw error;
       }
-      
       throw new UnauthorizedException('Token refresh failed. Please login again.');
     }
   }
-
   private async attachUserToRequest(req: any, userId: string): Promise<void> {
     try {
+      // Check account lockout
+      const lockoutStatus = await this.lockoutService.checkAccountLockout(userId);
+      if (lockoutStatus.isLocked) {
+        throw new UnauthorizedException(
+          `Account is locked until ${lockoutStatus.unlockTime?.toISOString()}`
+        );
+      }
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
-        include: { avatar: true }
+        include: { avatar: true, twoFactorAuth: true }
       });
-
       if (!user) {
-        this.logger.warn(`User not found during authentication: ${userId}`);
         throw new UnauthorizedException('User not found. Please login again.');
       }
-
       req.user = user;
-
     } catch (error) {
-      this.logger.error('Failed to attach user to request', error.stack);
-      
       if (error instanceof UnauthorizedException) {
         throw error;
       }
-      
       throw new UnauthorizedException('User verification failed');
-    }
-  }
-
-  // Utility method to validate required configuration
-  private validateConfiguration(): void {
-    const requiredSecrets = ['ACCESS_TOKEN_SECRET', 'REFRESH_TOKEN_SECRET'];
-    
-    for (const secret of requiredSecrets) {
-      if (!this.config.get<string>(secret)) {
-        this.logger.error(`Missing required configuration: ${secret}`);
-        throw new InternalServerErrorException('Server configuration error');
-      }
-    }
-  }
-
-  // Initialize guard with configuration validation
-  onModuleInit() {
-    try {
-      this.validateConfiguration();
-      this.logger.log('AuthGuard initialized successfully');
-    } catch (error) {
-      this.logger.error('AuthGuard initialization failed', error.stack);
-      throw error;
     }
   }
 }
