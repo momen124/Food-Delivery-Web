@@ -5,7 +5,6 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { join } from 'path';
 import { EjsAdapter } from '@nestjs-modules/mailer/dist/adapters/ejs.adapter';
 
-
 @Global()
 @Module({
   imports: [
@@ -20,10 +19,10 @@ import { EjsAdapter } from '@nestjs-modules/mailer/dist/adapters/ejs.adapter';
           },
         },
         defaults: {
-          from: 'momen A7a',
+          from: `"Food Delivery" <${config.get('SMTP_MAIL')}>`, // Better sender format
         },
         template: {
-          dir: join(__dirname, '../../../../servers/email-templates'),
+          dir: join(__dirname, '../../email-templates'), // FIXED: Correct relative path
           adapter: new EjsAdapter(),
           options: {
             strict: false,
@@ -34,6 +33,6 @@ import { EjsAdapter } from '@nestjs-modules/mailer/dist/adapters/ejs.adapter';
     }),
   ],
   providers: [EmailService],
-  exports: [EmailService], // Add this line to export EmailService
+  exports: [EmailService],
 })
 export class EmailModule {}

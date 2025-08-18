@@ -5,6 +5,9 @@ import { join } from 'path';
 import { UsersModule } from './users.module';
 import { GlobalExceptionFilter } from './filters/global-exception.filter';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
+import * as rateLimit from 'express-rate-limit';
+import * as helmet from 'helmet';
+import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -15,6 +18,39 @@ async function bootstrap() {
     const app = await NestFactory.create<NestExpressApplication>(UsersModule, {
       logger: ['log', 'error', 'warn', 'debug', 'verbose'],
     });
+
+    const configService = app.get(ConfigService);
+
+    // Security middleware
+    app.use(helmet({
+      contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false,
+    }));
+
+    // Rate limiting
+    app.use('/graphql', rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 100, // Limit each IP to 100 requests per windowMs
+      message: 'Too many requests from this IP, please try again later.',
+      standardHeaders: true,
+      legacyHeaders: false,
+    }));
+
+    // Stricter rate limiting for auth endpoints
+    const authLimiter = rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 5, // Only 5 attempts per 15 minutes for auth operations
+      message: 'Too many authentication attempts, please try again later.',
+      skip: (req) => {
+        // Only apply to auth mutations
+        const body = req.body;
+        const isAuthMutation = body?.query?.includes('register') || 
+                              body?.query?.includes('login') || 
+                              body?.query?.includes('forgotPassword');
+        return !isAuthMutation;
+      }
+    });
+
+    app.use('/graphql', authLimiter);
 
     // Security headers
     app.use((req, res, next) => {
@@ -27,14 +63,14 @@ async function bootstrap() {
 
     // Static assets and view engine
     app.useStaticAssets(join(__dirname, '..', 'public'));
-    app.setBaseViewsDir(join(__dirname, '..', 'servers/email-templates'));
+    app.setBaseViewsDir(join(__dirname, '..', 'email-templates')); // FIXED PATH
     app.setViewEngine('ejs');
 
     // CORS configuration
     app.enableCors({
       origin: process.env.NODE_ENV === 'production' 
         ? [process.env.CLIENT_SIDE_URI] 
-        : '*',
+        : ['http://localhost:3000', 'http://localhost:3001'], // More specific origins
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'accesstoken', 'refreshtoken'],
@@ -62,3 +98,17 @@ async function bootstrap() {
 
     // Graceful shutdown
     app.enableShutdownHooks();
+
+    const port = configService.get<number>('PORT') || 4001;
+    await app.listen(port);
+    
+    logger.log(`🚀 Users service running on: http://localhost:${port}`);
+    logger.log(`📊 GraphQL Playground: http://localhost:${port}/graphql`);
+
+  } catch (error) {
+    logger.error('Failed to start application', error.stack);
+    process.exit(1);
+  }
+}
+
+bootstrap();
