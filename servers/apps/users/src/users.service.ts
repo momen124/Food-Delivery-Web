@@ -176,7 +176,7 @@ export class UsersService {
           name,
           email,
           password,
-          phone_number: phone_number ? parseFloat(phone_number) : null,
+          phone_number: phone_number || null,
         },
       });
 
