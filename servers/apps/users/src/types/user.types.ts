@@ -12,42 +12,44 @@ export class ErrorType {
 
 @ObjectType()
 export class RegisterResponse {
-  @Field(()=> User, {nullable:true})
-  user?:User | any;
+  @Field(() => User, { nullable: true })
+  user?: User;
 
   @Field(() => ErrorType, { nullable: true })
   error?: ErrorType;
-  
+
+  @Field({ nullable: true })
+  activationToken?: string;
 }
 
-// @ObjectType()
-// export class ActivationResponse {
-//   @Field(() => User)
-//   user: User | unknown;
+@ObjectType()
+export class ActivationResponse {
+  @Field(() => User, { nullable: true })
+  user?: User;
 
-//   @Field(() => ErrorType, { nullable: true })
-//   error?: ErrorType;
-// }
+  @Field(() => ErrorType, { nullable: true })
+  error?: ErrorType;
+}
 
 @ObjectType()
 export class LoginResponse {
-  @Field(() => User)
-  user: User ;
+  @Field(() => User, { nullable: true })
+  user?: User;
 
-  // @Field({ nullable: true })
-  // accessToken?: string;
+  @Field({ nullable: true })
+  accessToken?: string;
 
-  // @Field({ nullable: true })
-  // refreshToken?: string;
+  @Field({ nullable: true })
+  refreshToken?: string;
 
   @Field(() => ErrorType, { nullable: true })
   error?: ErrorType;
 }
 
 @ObjectType()
-export class LogoutResponse { // Corrected typo here
+export class LogoutResponse {
   @Field()
-  message?: string;
+  message: string;
 }
 
 @ObjectType()
@@ -61,8 +63,8 @@ export class ForgotPasswordResponse {
 
 @ObjectType()
 export class ResetPasswordResponse {
-  @Field(() => User)
-  user: User | unknown;
+  @Field(() => User, { nullable: true })
+  user?: User;
 
   @Field(() => ErrorType, { nullable: true })
   error?: ErrorType;

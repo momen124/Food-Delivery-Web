@@ -5,7 +5,7 @@ import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
 export class RegisterDto {
   @Field()
   @IsNotEmpty({ message: 'Name is required.' })
-  @IsString({ message: 'Name must need to be one string.' })
+  @IsString({ message: 'Name must be a string.' })
   name: string;
 
   @Field()
@@ -18,9 +18,8 @@ export class RegisterDto {
   @IsEmail({}, { message: 'Email is invalid.' })
   email: string;
 
-  @Field({ nullable: true })  // Make phone_number optional
-  @IsNotEmpty({ message: 'Phone Number is required.' })
-  phone_number!: string;
+  @Field({ nullable: true })
+  phone_number?: string;
 }
 
 @InputType()
