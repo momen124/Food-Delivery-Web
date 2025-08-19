@@ -22,25 +22,27 @@ import { AppController } from './app.controller';
         }),
       },
       // Enable introspection and playground for development
-      introspection: true,
-      playground: true,
-      // Add error handling
-      formatError: (error) => {
-        console.error('GraphQL Error:', error);
-        return {
-          message: error.message,
-          // Only include error details in development
-          ...(process.env.NODE_ENV === 'development' && {
-            locations: error.locations,
-            path: error.path,
-            extensions: error.extensions,
-          }),
-        };
+      server: {
+        introspection: true,
+        playground: true,
+        // Add error handling
+        formatError: (error) => {
+          console.error('GraphQL Error:', error);
+          return {
+            message: error.message,
+            // Only include error details in development
+            ...(process.env.NODE_ENV === 'development' && {
+              locations: error.locations,
+              path: error.path,
+              extensions: error.extensions,
+            }),
+          };
+        },
+        // Add context to pass through headers
+        context: ({ req }) => ({
+          headers: req.headers,
+        }),
       },
-      // Add context to pass through headers
-      context: ({ req }) => ({
-        headers: req.headers,
-      }),
     }),
   ],
   controllers: [AppController],

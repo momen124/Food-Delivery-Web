@@ -1,5 +1,6 @@
 import * as request from 'supertest';
 import { INestApplication } from '@nestjs/common';
+import type { Response } from 'supertest';
 
 export class TestUtils {
   constructor(private app: INestApplication) {}
@@ -22,7 +23,7 @@ export class TestUtils {
     query: string,
     variables?: Record<string, any>,
     headers: Record<string, string> = {}
-  ) {
+  ): Promise<Response> {
     return request(this.app.getHttpServer())
       .post('/graphql')
       .set({
@@ -39,7 +40,7 @@ export class TestUtils {
     refreshToken: string,
     variables?: Record<string, any>,
     additionalHeaders: Record<string, string> = {}
-  ) {
+  ): Promise<Response> {
     return this.graphqlRequest(query, variables, {
       'accesstoken': accessToken,
       'refreshtoken': refreshToken,

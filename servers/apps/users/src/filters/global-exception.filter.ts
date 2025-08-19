@@ -22,9 +22,12 @@ export class GlobalExceptionFilter implements GqlExceptionFilter {
     let message = 'Internal server error';
     let code = 'INTERNAL_ERROR';
 
+    // Safe field name access
+    const fieldName = info?.fieldName || 'unknown';
+
     // Log the error
     this.logger.error(
-      `GraphQL Error in ${info.fieldName}: ${exception.message}`,
+      `GraphQL Error in ${fieldName}: ${exception.message}`,
       exception.stack,
     );
 
@@ -56,6 +59,10 @@ export class GlobalExceptionFilter implements GqlExceptionFilter {
       status = HttpStatus.BAD_REQUEST;
       message = exception.message || 'Validation failed';
       code = 'VALIDATION_ERROR';
+    } else if (exception.name === 'ThrottlerException' || exception.message?.includes('Too many requests')) {
+      status = HttpStatus.TOO_MANY_REQUESTS;
+      message = 'Too many requests, please try again later.';
+      code = 'RATE_LIMITED';
     }
 
     // Return formatted error
@@ -65,7 +72,7 @@ export class GlobalExceptionFilter implements GqlExceptionFilter {
         message,
         code,
         timestamp: new Date().toISOString(),
-        path: info.fieldName,
+        path: fieldName,
       },
       status,
     );

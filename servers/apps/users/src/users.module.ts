@@ -60,7 +60,8 @@ import { Reflector } from '@nestjs/core';
     }),
     PrismaModule,
     EmailModule,
-    RateLimitingModule,
+    // Only add rate limiting module if not in test environment
+    ...(process.env.NODE_ENV !== 'test' ? [RateLimitingModule] : []),
     CsrfModule,
     SessionModule,
     JwtModule.registerAsync({
@@ -81,7 +82,7 @@ import { Reflector } from '@nestjs/core';
     TwoFactorAuthService,
     SessionService,
     AuthGuard,
-    Reflector, // Add Reflector explicitly
+    Reflector,
     {
       provide: APP_GUARD,
       useClass: AuthGuard,
