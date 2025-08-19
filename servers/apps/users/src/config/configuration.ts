@@ -1,5 +1,6 @@
+// src/config/configuration.ts
 import { plainToClass, Transform } from 'class-transformer';
-import { IsString, IsNotEmpty, IsUrl, IsEmail, validateSync, IsOptional, IsNumber } from 'class-validator';
+import { IsString, IsNotEmpty, IsUrl, IsEmail, validateSync, IsNumber, Min, Max, IsOptional } from 'class-validator';
 
 export class EnvironmentVariables {
   @IsNotEmpty()
@@ -23,7 +24,7 @@ export class EnvironmentVariables {
   FORGOT_PASSWORD_SECRET: string;
 
   @IsNotEmpty()
-  @IsUrl({ require_tld: false }) // Allow localhost without TLD
+  @IsUrl({ require_tld: false }) // Allow localhost URLs without TLD
   CLIENT_SIDE_URI: string;
 
   @IsNotEmpty()
@@ -41,32 +42,34 @@ export class EnvironmentVariables {
   @IsOptional()
   @Transform(({ value }) => (typeof value === 'string' ? parseInt(value, 10) : value))
   @IsNumber()
-  @IsOptional()
+  @Min(0)
+  @Max(65535)
   PORT: number = 4001;
 
   @IsOptional()
   @IsString()
   NODE_ENV: string = 'development';
 
+  // Additional optional fields to match your Joi schema
   @IsOptional()
   @IsString()
   CSRF_SECRET?: string;
-
-  @IsOptional()
-  @IsNumber()
-  RATE_LIMIT_TTL: number = 60;
-
-  @IsOptional()
-  @IsNumber()
-  RATE_LIMIT_MAX: number = 100;
 
   @IsOptional()
   @IsString()
   SESSION_SECRET?: string;
 
   @IsOptional()
+  @IsNumber()
+  RATE_LIMIT_TTL?: number = 60;
+
+  @IsOptional()
+  @IsNumber()
+  RATE_LIMIT_MAX?: number = 100;
+
+  @IsOptional()
   @IsString()
-  TWO_FACTOR_APP_NAME: string = 'Food Delivery';
+  TWO_FACTOR_APP_NAME?: string = 'Food Delivery';
 }
 
 export function validateConfig(config: Record<string, unknown>) {
@@ -90,6 +93,7 @@ export function validateConfig(config: Record<string, unknown>) {
   return validatedConfig;
 }
 
+// Configuration factory
 export default () => ({
   port: parseInt(process.env.PORT || '4001', 10),
   database: {

@@ -12,7 +12,7 @@ import * as Joi from 'joi';
 // Core modules
 import { UsersResolver } from './user.resolver';
 import { EmailModule } from './email/email.module';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { PrismaModule } from '../../../prisma/prisma.module'; // Import PrismaModule
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 
@@ -25,7 +25,6 @@ import { TwoFactorAuthService } from './security/two-factor-auth.service';
 
 // Guards
 import { AuthGuard } from './guards/auth.guard';
-import { CustomThrottlerGuard } from './guards/custom-throttler.guard';
 
 // Configuration
 import configuration, { validateConfig } from './config/configuration';
@@ -69,6 +68,7 @@ import { SessionService } from './security/session.service';
       introspection: process.env.NODE_ENV !== 'production',
       playground: process.env.NODE_ENV !== 'production',
     }),
+    PrismaModule, // Add PrismaModule instead of registering PrismaService directly
     EmailModule,
     RateLimitingModule,
     CsrfModule,
@@ -79,7 +79,7 @@ import { SessionService } from './security/session.service';
     UsersService,
     ConfigService,
     JwtService,
-    PrismaService,
+    // Remove PrismaService from here since it's now in PrismaModule
     UsersResolver,
     AccountLockoutService,
     TwoFactorAuthService,
