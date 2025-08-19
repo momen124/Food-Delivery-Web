@@ -19,10 +19,10 @@ import { EjsAdapter } from '@nestjs-modules/mailer/dist/adapters/ejs.adapter';
           },
         },
         defaults: {
-          from: `"Food Delivery" <${config.get('SMTP_MAIL')}>`, // Better sender format
+          from: `"Food Delivery" <${config.get('SMTP_MAIL')}>`,
         },
         template: {
-          dir: join(__dirname, '../../email-templates'), // FIXED: Correct relative path
+          dir: join(__dirname, '../../../email-templates'), // Fixed path
           adapter: new EjsAdapter(),
           options: {
             strict: false,
