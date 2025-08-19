@@ -22,7 +22,7 @@ import * as bcrypt from 'bcrypt';
 import { EmailService } from './email/email.service';
 import { TokenSender } from './utils/sendToken';
 import { User } from '@prisma/client';
-import { PrismaService } from "../prisma/prisma.service";
+import { PrismaService } from "../../../prisma/prisma.service";
 import { Prisma } from '@prisma/client';
 
 interface UserData {

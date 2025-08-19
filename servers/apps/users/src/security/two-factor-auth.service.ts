@@ -1,9 +1,8 @@
-// Fixed two-factor-auth.service.ts
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as speakeasy from 'speakeasy';
 import * as QRCode from 'qrcode';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../../../prisma/prisma.service';
 
 @Injectable()
 export class TwoFactorAuthService {

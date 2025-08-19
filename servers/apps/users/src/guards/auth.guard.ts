@@ -11,7 +11,7 @@ import { GqlExecutionContext } from '@nestjs/graphql';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../../../prisma/prisma.service';
 import { SessionService } from '../security/session.service';
 import { TwoFactorAuthService } from '../security/two-factor-auth.service';
 import { AccountLockoutService } from '../security/account-lockout.service';

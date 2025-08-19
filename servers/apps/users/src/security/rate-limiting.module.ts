@@ -28,7 +28,7 @@ import { CustomThrottlerGuard } from '../guards/custom-throttler.guard';
             limit: 3, // 3 registration attempts per hour
           },
         ],
-        storage: config.get('NODE_ENV') === 'production' ? 'redis' : 'memory',
+       
         ignoreUserAgents: [/googlebot/gi, /bingbot/gi],
       }),
     }),

@@ -12,7 +12,7 @@ import * as Joi from 'joi';
 // Core modules
 import { UsersResolver } from './user.resolver';
 import { EmailModule } from './email/email.module';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../../../prisma/prisma.service';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 
@@ -47,7 +47,7 @@ import { SessionService } from './security/session.service';
         SMTP_HOST: Joi.string().required(),
         SMTP_MAIL: Joi.string().email().required(),
         SMTP_PASSWORD: Joi.string().required(),
-        PORT: Joi.number().default(4001),
+        PORT: Joi.number().port().default(4001),
         NODE_ENV: Joi.string().default('development'),
         CSRF_SECRET: Joi.string().min(32).optional(),
         RATE_LIMIT_TTL: Joi.number().default(60),

@@ -1,7 +1,7 @@
 // Fixed imports for account-lockout.service.ts
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../../../prisma/prisma.service';
 
 export interface LockoutConfig {
   maxAttempts: number;

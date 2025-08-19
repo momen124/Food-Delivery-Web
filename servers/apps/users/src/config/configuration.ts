@@ -1,6 +1,5 @@
-// src/config/configuration.ts
 import { plainToClass, Transform } from 'class-transformer';
-import { IsString, IsNotEmpty, IsUrl, IsEmail, validateSync, IsPort, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsUrl, IsEmail, validateSync, IsOptional, IsNumber } from 'class-validator';
 
 export class EnvironmentVariables {
   @IsNotEmpty()
@@ -24,7 +23,7 @@ export class EnvironmentVariables {
   FORGOT_PASSWORD_SECRET: string;
 
   @IsNotEmpty()
-  @IsUrl()
+  @IsUrl({ require_tld: false }) // Allow localhost without TLD
   CLIENT_SIDE_URI: string;
 
   @IsNotEmpty()
@@ -40,13 +39,34 @@ export class EnvironmentVariables {
   SMTP_PASSWORD: string;
 
   @IsOptional()
-  @Transform(({ value }) => parseInt(value))
-  @IsPort()
-  PORT?: number = 4001;
+  @Transform(({ value }) => (typeof value === 'string' ? parseInt(value, 10) : value))
+  @IsNumber()
+  @IsOptional()
+  PORT: number = 4001;
 
   @IsOptional()
   @IsString()
-  NODE_ENV?: string = 'development';
+  NODE_ENV: string = 'development';
+
+  @IsOptional()
+  @IsString()
+  CSRF_SECRET?: string;
+
+  @IsOptional()
+  @IsNumber()
+  RATE_LIMIT_TTL: number = 60;
+
+  @IsOptional()
+  @IsNumber()
+  RATE_LIMIT_MAX: number = 100;
+
+  @IsOptional()
+  @IsString()
+  SESSION_SECRET?: string;
+
+  @IsOptional()
+  @IsString()
+  TWO_FACTOR_APP_NAME: string = 'Food Delivery';
 }
 
 export function validateConfig(config: Record<string, unknown>) {
@@ -70,9 +90,8 @@ export function validateConfig(config: Record<string, unknown>) {
   return validatedConfig;
 }
 
-// Configuration factory
 export default () => ({
-  port: parseInt(process.env.PORT, 10) || 4001,
+  port: parseInt(process.env.PORT || '4001', 10),
   database: {
     url: process.env.DATABASE_URL,
   },
@@ -92,5 +111,18 @@ export default () => ({
   },
   app: {
     nodeEnv: process.env.NODE_ENV || 'development',
+  },
+  rateLimit: {
+    ttl: parseInt(process.env.RATE_LIMIT_TTL || '60', 10),
+    max: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
+  },
+  csrf: {
+    secret: process.env.CSRF_SECRET,
+  },
+  session: {
+    secret: process.env.SESSION_SECRET,
+  },
+  twoFactor: {
+    appName: process.env.TWO_FACTOR_APP_NAME || 'Food Delivery',
   },
 });

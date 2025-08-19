@@ -5,8 +5,8 @@ import { join } from 'path';
 import { UsersModule } from './users.module';
 import { GlobalExceptionFilter } from './filters/global-exception.filter';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
-import * as rateLimit from 'express-rate-limit';
-import * as helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import helmet from 'helmet';
 import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
@@ -63,14 +63,14 @@ async function bootstrap() {
 
     // Static assets and view engine
     app.useStaticAssets(join(__dirname, '..', 'public'));
-    app.setBaseViewsDir(join(__dirname, '..', 'email-templates')); // FIXED PATH
+    app.setBaseViewsDir(join(__dirname, '..', 'email-templates'));
     app.setViewEngine('ejs');
 
     // CORS configuration
     app.enableCors({
       origin: process.env.NODE_ENV === 'production' 
         ? [process.env.CLIENT_SIDE_URI] 
-        : ['http://localhost:3000', 'http://localhost:3001'], // More specific origins
+        : ['http://localhost:3000', 'http://localhost:3001'],
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'accesstoken', 'refreshtoken'],
