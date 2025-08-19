@@ -5,7 +5,8 @@ import {
   UnauthorizedException,
   ConflictException,
   NotFoundException,
-  Logger
+  Logger,
+  OnModuleInit
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService, JwtVerifyOptions } from '@nestjs/jwt';
@@ -32,7 +33,7 @@ interface UserData {
 }
 
 @Injectable()
-export class UsersService {
+export class UsersService implements OnModuleInit {
   private readonly logger = new Logger(UsersService.name);
 
   constructor(
@@ -41,6 +42,17 @@ export class UsersService {
     private readonly configService: ConfigService,
     private readonly emailService: EmailService,
   ) {}
+
+  // Initialize service with config validation
+  async onModuleInit() {
+    try {
+      this.validateRequiredConfig();
+      this.logger.log('UsersService initialized successfully');
+    } catch (error) {
+      this.logger.error('UsersService initialization failed', error.stack);
+      throw error;
+    }
+  }
 
   // register user service
   async register(registerDto: RegisterDto, response: Response) {
@@ -58,11 +70,11 @@ export class UsersService {
         throw new ConflictException('User already exists with this email!');
       }
 
-      // Check phone number uniqueness if provided
+      // Check phone number uniqueness if provided - FIXED: Keep as string
       if (phone_number) {
         const isPhoneExist = await this.prisma.user.findFirst({
           where: {
-            phone_number: parseFloat(phone_number),
+            phone_number: phone_number, // ✅ Fixed: Keep as string, not parseFloat
             NOT: { phone_number: null }
           },
         });
@@ -72,8 +84,8 @@ export class UsersService {
         }
       }
 
-      // Hash password
-      const hashedPassword = await bcrypt.hash(password, 12); // Increased salt rounds
+      // Hash password with increased salt rounds for security
+      const hashedPassword = await bcrypt.hash(password, 12);
 
       const user: UserData = {
         name,
@@ -289,10 +301,11 @@ export class UsersService {
         this.configService.get<string>('CLIENT_SIDE_URI') +
         `/reset-password?verify=${forgotPasswordToken}`;
 
+      // Send forgot password email - FIXED: Use correct template name
       await this.emailService.sendMail({
         email,
         subject: 'Reset your Password!',
-        template: './forgot-password',
+        template: './Reset-Your-Password', // ✅ Fixed: Match actual template file name
         name: user.name,
         activationCode: resetPasswordUrl,
       });
@@ -461,17 +474,6 @@ export class UsersService {
         this.logger.error(`Missing required environment variable: ${envVar}`);
         throw new InternalServerErrorException('Server configuration error');
       }
-    }
-  }
-
-  // Initialize service with config validation
-  async onModuleInit() {
-    try {
-      this.validateRequiredConfig();
-      this.logger.log('UsersService initialized successfully');
-    } catch (error) {
-      this.logger.error('UsersService initialization failed', error.stack);
-      throw error;
     }
   }
 }
