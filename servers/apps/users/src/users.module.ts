@@ -1,34 +1,24 @@
 import { Module } from '@nestjs/common';
 import { GraphQLModule } from '@nestjs/graphql';
-import {
-  ApolloFederationDriver,
-  ApolloFederationDriverConfig,
-} from '@nestjs/apollo';
+import { ApolloFederationDriver, ApolloFederationDriverConfig } from '@nestjs/apollo';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
+import { JwtModule, JwtService } from '@nestjs/jwt';
 import { APP_GUARD } from '@nestjs/core';
 import * as Joi from 'joi';
-
-// Core modules
 import { UsersResolver } from './user.resolver';
 import { EmailModule } from './email/email.module';
-import { PrismaModule } from '../../../prisma/prisma.module'; // Import PrismaModule
+import { PrismaModule } from '../../../prisma/prisma.module';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
-
-// Security modules
 import { RateLimitingModule } from './security/rate-limiting.module';
 import { CsrfModule } from './security/csrf.module';
 import { SessionModule } from './security/session.module';
 import { AccountLockoutService } from './security/account-lockout.service';
 import { TwoFactorAuthService } from './security/two-factor-auth.service';
-
-// Guards
 import { AuthGuard } from './guards/auth.guard';
-
-// Configuration
-import configuration, { validateConfig } from './config/configuration';
 import { SessionService } from './security/session.service';
+import configuration, { validateConfig } from './config/configuration';
+import { Reflector } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -68,22 +58,30 @@ import { SessionService } from './security/session.service';
       introspection: process.env.NODE_ENV !== 'production',
       playground: process.env.NODE_ENV !== 'production',
     }),
-    PrismaModule, // Add PrismaModule instead of registering PrismaService directly
+    PrismaModule,
     EmailModule,
     RateLimitingModule,
     CsrfModule,
     SessionModule,
+    JwtModule.registerAsync({
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get<string>('ACCESS_TOKEN_SECRET'),
+        signOptions: { expiresIn: '15m' },
+      }),
+      inject: [ConfigService],
+    }),
   ],
   controllers: [UsersController],
   providers: [
     UsersService,
     ConfigService,
     JwtService,
-    // Remove PrismaService from here since it's now in PrismaModule
     UsersResolver,
     AccountLockoutService,
     TwoFactorAuthService,
     SessionService,
+    AuthGuard,
+    Reflector, // Add Reflector explicitly
     {
       provide: APP_GUARD,
       useClass: AuthGuard,

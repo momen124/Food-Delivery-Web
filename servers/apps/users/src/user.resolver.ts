@@ -1,17 +1,16 @@
-import { 
-  BadRequestException, 
-  UseGuards, 
-  UsePipes, 
+import {
+  BadRequestException,
+  UsePipes,
   ValidationPipe,
   Logger,
-  InternalServerErrorException
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
 import {
   ActivationResponse,
   ForgotPasswordResponse,
   LoginResponse,
-  LogoutResponse, // Fixed typo
+  LogoutResponse,
   RegisterResponse,
   ResetPasswordResponse,
 } from './types/user.types';
@@ -23,34 +22,36 @@ import {
   LoginDto,
 } from './dto/user.dto';
 import { Response, Request } from 'express';
-import { AuthGuard } from './guards/auth.guard';
 import { User } from './entities/user.entities';
 import { UsersService } from './users.service';
+import { Public } from './decorators/public.decorator';
 
 @Resolver('User')
-@UsePipes(new ValidationPipe({ 
-  transform: true,
-  whitelist: true,
-  forbidNonWhitelisted: true,
-  exceptionFactory: (errors) => {
-    const messages = errors.map(error => 
-      Object.values(error.constraints || {}).join(', ')
-    ).join('; ');
-    return new BadRequestException(`Validation failed: ${messages}`);
-  }
-}))
+@UsePipes(
+  new ValidationPipe({
+    transform: true,
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    exceptionFactory: (errors) => {
+      const messages = errors
+        .map((error) => Object.values(error.constraints || {}).join(', '))
+        .join('; ');
+      return new BadRequestException(`Validation failed: ${messages}`);
+    },
+  }),
+)
 export class UsersResolver {
   private readonly logger = new Logger(UsersResolver.name);
 
   constructor(private readonly userService: UsersService) {}
 
   @Mutation(() => RegisterResponse)
+  @Public()
   async register(
     @Args('registerDto') registerDto: RegisterDto,
     @Context() context: { res: Response },
   ): Promise<RegisterResponse> {
     try {
-      // Additional validation
       if (!registerDto.name?.trim() || !registerDto.email?.trim() || !registerDto.password?.trim()) {
         throw new BadRequestException('Please fill in all required fields');
       }
@@ -59,27 +60,26 @@ export class UsersResolver {
 
       const result = await this.userService.register(registerDto, context.res);
 
-      return { 
+      return {
         activationToken: result.activation_token,
-        user: null, // Don't return user data until activated
-        error: null 
+        user: null,
+        error: null,
       };
-
     } catch (error) {
       this.logger.error('Registration resolver error', error.stack);
-      
       return {
         user: null,
         activationToken: null,
         error: {
           message: error.message || 'Registration failed',
-          code: error.status?.toString() || 'REGISTRATION_ERROR'
-        }
+          code: error.status?.toString() || 'REGISTRATION_ERROR',
+        },
       };
     }
   }
 
   @Mutation(() => ActivationResponse)
+  @Public()
   async activateUser(
     @Args('activationDto') activationDto: ActivationDto,
     @Context() context: { res: Response },
@@ -91,28 +91,24 @@ export class UsersResolver {
 
       return {
         user: result.user,
-        error: null
+        error: null,
       };
-
     } catch (error) {
       this.logger.error('Activation resolver error', error.stack);
-      
       return {
         user: null,
         error: {
           message: error.message || 'Account activation failed',
-          code: error.status?.toString() || 'ACTIVATION_ERROR'
-        }
+          code: error.status?.toString() || 'ACTIVATION_ERROR',
+        },
       };
     }
   }
 
   @Mutation(() => LoginResponse)
-  async login(
-    @Args('loginDto') loginDto: LoginDto,
-  ): Promise<LoginResponse> {
+  @Public()
+  async login(@Args('loginDto') loginDto: LoginDto): Promise<LoginResponse> {
     try {
-      // Validate input
       if (!loginDto.email?.trim() || !loginDto.password?.trim()) {
         throw new BadRequestException('Email and password are required');
       }
@@ -122,24 +118,21 @@ export class UsersResolver {
       const result = await this.userService.login(loginDto);
 
       return result;
-
     } catch (error) {
       this.logger.error('Login resolver error', error.stack);
-      
       return {
         user: null,
         accessToken: null,
         refreshToken: null,
         error: {
           message: error.message || 'Login failed',
-          code: error.status?.toString() || 'LOGIN_ERROR'
-        }
+          code: error.status?.toString() || 'LOGIN_ERROR',
+        },
       };
     }
   }
 
   @Query(() => LoginResponse)
-  @UseGuards(AuthGuard)
   async getLoggedInUser(@Context() context: { req: Request }): Promise<LoginResponse> {
     try {
       this.logger.log('Get logged in user request');
@@ -150,25 +143,24 @@ export class UsersResolver {
         user: result.user,
         accessToken: result.accessToken,
         refreshToken: result.refreshToken,
-        error: null
+        error: null,
       };
-
     } catch (error) {
       this.logger.error('Get logged in user resolver error', error.stack);
-      
       return {
         user: null,
         accessToken: null,
         refreshToken: null,
         error: {
           message: error.message || 'Failed to get user information',
-          code: error.status?.toString() || 'GET_USER_ERROR'
-        }
+          code: error.status?.toString() || 'GET_USER_ERROR',
+        },
       };
     }
   }
 
   @Mutation(() => ForgotPasswordResponse)
+  @Public()
   async forgotPassword(
     @Args('forgotPasswordDto') forgotPasswordDto: ForgotPasswordDto,
   ): Promise<ForgotPasswordResponse> {
@@ -183,23 +175,22 @@ export class UsersResolver {
 
       return {
         message: result.message,
-        error: null
+        error: null,
       };
-
     } catch (error) {
       this.logger.error('Forgot password resolver error', error.stack);
-      
       return {
         message: null,
         error: {
           message: error.message || 'Password reset request failed',
-          code: error.status?.toString() || 'FORGOT_PASSWORD_ERROR'
-        }
+          code: error.status?.toString() || 'FORGOT_PASSWORD_ERROR',
+        },
       };
     }
   }
 
   @Mutation(() => ResetPasswordResponse)
+  @Public()
   async resetPassword(
     @Args('resetPasswordDto') resetPasswordDto: ResetPasswordDto,
   ): Promise<ResetPasswordResponse> {
@@ -214,24 +205,21 @@ export class UsersResolver {
 
       return {
         user: result.user,
-        error: null
+        error: null,
       };
-
     } catch (error) {
       this.logger.error('Reset password resolver error', error.stack);
-      
       return {
         user: null,
         error: {
           message: error.message || 'Password reset failed',
-          code: error.status?.toString() || 'RESET_PASSWORD_ERROR'
-        }
+          code: error.status?.toString() || 'RESET_PASSWORD_ERROR',
+        },
       };
     }
   }
 
   @Query(() => LogoutResponse)
-  @UseGuards(AuthGuard)
   async logOutUser(@Context() context: { req: Request }): Promise<LogoutResponse> {
     try {
       this.logger.log('Logout request');
@@ -239,28 +227,24 @@ export class UsersResolver {
       const result = await this.userService.logout(context.req);
 
       return {
-        message: result.message
+        message: result.message,
       };
-
     } catch (error) {
       this.logger.error('Logout resolver error', error.stack);
-      
       return {
-        message: 'Logout failed'
+        message: 'Logout failed',
       };
     }
   }
 
   @Query(() => [User])
-  @UseGuards(AuthGuard) // Protect this endpoint
   async getUsers(): Promise<User[]> {
     try {
       this.logger.log('Get all users request');
 
       const users = await this.userService.getUsers();
-      
-      return users;
 
+      return users;
     } catch (error) {
       this.logger.error('Get users resolver error', error.stack);
       throw new InternalServerErrorException('Failed to fetch users');
